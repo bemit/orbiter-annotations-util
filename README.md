@@ -1,6 +1,10 @@
 # Orbiter\AnnotationUtil
 
-A Helper util for Doctrine\Annotations, uses cached reflection by [scaleupstack/reflection](https://packagist.org/packages/scaleupstack/reflection).  
+A Helper util for Doctrine\Annotations, uses cached reflection by [scaleupstack/reflection](https://packagist.org/packages/scaleupstack/reflection).
+
+Install with composer:
+
+    composer require orbiter/annotations-util  
  
 See doctrine docs for details:
 
