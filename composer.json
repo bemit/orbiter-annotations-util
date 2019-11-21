@@ -1,0 +1,18 @@
+{
+  "name": "orbiter/annotation-util",
+  "license": "MIT",
+  "description": "",
+  "require": {
+    "php": ">=7.1",
+    "doctrine/annotations": "^1.6",
+    "doctrine/cache": "^1.7",
+    "scaleupstack/reflection": "^1.2"
+  },
+  "autoload": {
+    "psr-4": {
+      "Orbiter\\AnnotationsUtil\\": "src"
+    }
+  },
+  "minimum-stability": "dev",
+  "prefer-stable": true
+}
