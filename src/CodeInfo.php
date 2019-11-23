@@ -9,6 +9,10 @@ use PhpParser\NodeTraverser;
 use PhpParser\NodeVisitorAbstract;
 
 /**
+ * Static Code Analyze Helper
+ *
+ * @todo add already-parsed file cache or even already parsed folder cache
+ * @todo add control of recursive scan of dir, editable per dir per group
  *
  * @package Orbiter\AnnotationsUtil
  */
@@ -21,11 +25,21 @@ class CodeInfo {
     protected $dirs_to_parse = [];
 
     /**
-     * @var \Orbiter\AnnotationsUtil\CodeInfoData
+     * @var \Orbiter\AnnotationsUtil\CodeInfoDataInterface
      */
     protected $data;
 
-    public function __construct(CodeInfoData $data_obj = null) {
+    /**
+     * @var array keys contains the extensions that should be used
+     */
+    protected $extensions = [
+        'php' => '',
+    ];
+
+    /**
+     * @param \Orbiter\AnnotationsUtil\CodeInfoDataInterface|null $data_obj overwrite $data_obj with your own
+     */
+    public function __construct(CodeInfoDataInterface $data_obj = null) {
         $this->data = $data_obj ?: new CodeInfoData();
     }
 
@@ -37,6 +51,28 @@ class CodeInfo {
     }
 
     /**
+     * Add an extension that should be processed, default includes `php`
+     *
+     * @param string $ext
+     */
+    public function addExtension($ext) {
+        $this->extensions[$ext] = '';
+    }
+
+    /**
+     * Removes an extension from the processing, default includes `php`
+     *
+     * @param string $ext
+     */
+    public function rmExtension($ext) {
+        if(isset($this->extensions[$ext])) {
+            unset($this->extensions[$ext]);
+        }
+    }
+
+    /**
+     * Define a group of dirs to parse, select result is saved based on the groups, one dir can be in multiple groups.
+     *
      * @param string $group
      * @param string[] $dirs
      */
@@ -56,7 +92,7 @@ class CodeInfo {
     }
 
     /**
-     * Analyze code and get the classes out of the file contents of a folder
+     * Analyze code and get the classes out of each files contents in a folder, recursive
      *
      * @param $group
      * @param array $dirs
@@ -70,13 +106,14 @@ class CodeInfo {
             $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($dir), \RecursiveIteratorIterator::SELF_FIRST);
 
             foreach($iterator as $file) {
-                if($file->isFile() && in_array($file->getExtension(), ['php', 'php5'])) {
+                if($file->isFile() && array_key_exists($file->getExtension(), $this->extensions)) {
                     $scanned_dir[] = $file->getPathname();
                 }
             }
         }
 
         foreach($scanned_dir as $php_file) {
+            // todo: here could be a good place for a `already scanned` cache check
             if(is_file($php_file)) {
                 $this->analyzeCode($group, file_get_contents($php_file));
             }
@@ -84,7 +121,7 @@ class CodeInfo {
     }
 
     /**
-     * @return \Orbiter\AnnotationsUtil\CodeInfoData the parsed classes
+     * @return \Orbiter\AnnotationsUtil\CodeInfoDataInterface the parsed result object
      */
     public function getData() {
         return $this->data;
@@ -109,7 +146,7 @@ class CodeInfo {
 
         $traverser->addVisitor(new class($this->data, $group) extends NodeVisitorAbstract {
             /**
-             * @var \Orbiter\AnnotationsUtil\CodeInfoData
+             * @var \Orbiter\AnnotationsUtil\CodeInfoDataInterface
              */
             protected $data;
             /**
@@ -132,6 +169,8 @@ class CodeInfo {
 
     /**
      * Process the defined parsings or re-initiate data from cache
+     *
+     * @throws \Orbiter\AnnotationsUtil\CodeInfoCacheFileException
      */
     public function process() {
         if(
@@ -142,26 +181,39 @@ class CodeInfo {
                 )
             )
         ) {
+            // when no cache is on
+            // or cache is on: and cache file doesn't exist and (dir exists or could be created)
             foreach($this->dirs_to_parse as $group => $to_load_dirs) {
                 $this->parseDirs($group, $to_load_dirs);
             }
+
             if($this->file_cache) {
                 file_put_contents($this->file_cache, json_encode($this->data));
             }
-        } else if(is_file($this->file_cache)) {
+            return;
+        }
+
+        if(is_file($this->file_cache)) {
+            // when file cache exists
             $cache_content = file_get_contents($this->file_cache);
             $cache_content_parsed = json_decode($cache_content, true);
 
             $this->mapCache($cache_content_parsed);
+
+            return;
         }
+
+        throw new CodeInfoCacheFileException('Can not process dirs, cache file not creatable: ' . $this->file_cache);
     }
 
+    /**
+     * Get cached version into CodeInfoDataInterface implementing object
+     *
+     * @param array $cache array representation of this class
+     */
     protected function mapCache($cache) {
-        if(isset($cache['classes'])) {
-            $this->data->classes = $cache['classes'];
-        }
-        if(isset($cache['classes_simplified'])) {
-            $this->data->classes_simplified = $cache['classes_simplified'];
+        foreach($cache as $attr => $value) {
+            $this->data->setAttribute($attr, $value);
         }
     }
 }

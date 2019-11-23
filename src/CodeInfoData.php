@@ -9,12 +9,26 @@ use PhpParser\Node;
  *
  * @package Orbiter\AnnotationsUtil
  */
-class CodeInfoData {
+class CodeInfoData implements CodeInfoDataInterface {
     public $classes = [];
     public $classes_simplified = [];
 
     /**
-     * @param $group
+     * Should be used to set any property with the cached version
+     *
+     * @param $attr
+     * @param $val
+     */
+    public function setAttribute($attr, $val) {
+        if(property_exists($this, $attr)) {
+            $this->$attr = $val;
+        }
+    }
+
+    /**
+     * Returns the found full qualified class names in this group of folders
+     *
+     * @param string $group
      *
      * @return array
      */
@@ -25,7 +39,7 @@ class CodeInfoData {
     /**
      * Uses the parsed class data and returns their names
      *
-     * @param $class
+     * @param Node\Name $class
      *
      * @return string
      */
@@ -39,10 +53,10 @@ class CodeInfoData {
     /**
      * Used in the NodeWalker, so easy to extend the code info parser at all
      *
-     * @param $group
-     * @param $node
+     * @param string $group
+     * @param Node $node
      */
-    public function parse($group, $node) {
+    public function parse($group, Node $node) {
         if($node instanceof Node\Stmt\Class_ && $node->namespacedName) {
             $this->addClassName($group, $node->namespacedName);
         }
@@ -51,10 +65,10 @@ class CodeInfoData {
     /**
      * Add the raw class data and a simplified version of class names
      *
-     * @param $group
-     * @param $class
+     * @param string $group
+     * @param Node\Name $class
      */
-    public function addClassName($group, $class) {
+    public function addClassName($group, Node\Name $class) {
         if(!is_array($this->classes[$group])) {
             $this->classes[$group] = [];
         }

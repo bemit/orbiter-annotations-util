@@ -1,21 +1,20 @@
 # Orbiter\AnnotationUtil
 
-A Helper util for Doctrine\Annotations, uses cached reflection by [scaleupstack/reflection](https://packagist.org/packages/scaleupstack/reflection).
+Helper utility for Doctrine\Annotations, uses cached reflection by [scaleupstack/reflection](https://packagist.org/packages/scaleupstack/reflection).
+
+Includes CodeInfo for static code analyzes, for easier, automatic parsing of Annotations and e.g. setup of DI.
 
 - [AnnotationsUtil](#annotationsutil)
 - [Example Annotation](#example-annotation)
-- [CodeInfo](#code-info-a-file-content-parsing-helper)
+- [CodeInfo](#code-info---a-file-content-parsing-helper)
 - [Example DI Service Setup with CodeInfo](#example-codeinfo-di-service-setup)
+- [License](#license)
 
 Install with composer:
 
     composer require orbiter/annotations-util
  
-See doctrine docs for details:
-
-- [Create Annotation](https://www.doctrine-project.org/projects/doctrine-annotations/en/1.6/index.html#reading-annotations)
-- [Handling Annotation](https://www.doctrine-project.org/projects/doctrine-annotations/en/1.6/annotations.html#handling-annotations), how to setup Annotation loaders
-
+See [doctrine docs](https://www.doctrine-project.org/projects/annotations.html) for details on what Annotations are and complexer Examples.
 
 ## AnnotationsUtil
 
@@ -64,7 +63,7 @@ AnnotationsUtil::invokeStaticMethod(App\Foo::class, 'foo');
 
 ### Example Annotation
 
-Define your annotation, remember to specify it in the Annotation loaders - normal autoloading doesn't work here!
+Define your annotation, remember to specify it in the Annotation loaders - normal **autoloading doesn't work** for classes using `@Annotation`!
 
 ```php
 <?php
@@ -96,7 +95,7 @@ class Foo {
 }
 ```
 
-Get value of the annotation:
+Get value of the Annotation:
 
 ```php
 <?php
@@ -104,9 +103,15 @@ use Orbiter\AnnotationsUtil\AnnotationsUtil;
 
 // this prints "demo-value"
 echo AnnotationsUtil::getMethodAnnotation(App\Foo::class, 'bar', Lib\MyAnnotation::class)->myProperty;
+/**
+ * @var Lib\MyAnnotation $annotation this variable is the Annotation instance and contains also it's data
+ */
+$annotation = AnnotationsUtil::getMethodAnnotation(App\Foo::class, 'bar', Lib\MyAnnotation::class);
+// this is the recommended way to use the properties
+echo $annotation->myProperty;
 ```
 
-This example is a summarized version from [Doctrine\Annotations: Create Annotations](https://www.doctrine-project.org/projects/doctrine-annotations/en/1.6/index.html#introduction).
+This example is a summarized version, using this utility to read in the end, from [Doctrine\Annotations: Create Annotations](https://www.doctrine-project.org/projects/doctrine-annotations/en/1.6/index.html#introduction).
 
 ## Code Info - a file Content parsing helper
 
@@ -132,6 +137,10 @@ $code_info->defineDirs('services', [
     __DIR__ . '/Lib',
 ]);
 
+// Change Extensions that will be parsed, default includes `php`
+$code_info->addExtension('php5');
+$code_info->rmExtension('php');
+
 // parse defined folders
 $code_info->process();
 
@@ -141,9 +150,11 @@ $services = $code_info->getClassNames('services');
 
 Things needs to be done:
 
-- cache parsed result of dir and use it when same dir get's scanned again
-    - currently scans dirs multiple times
+- cache parsed result of file or dir and use it when same file/dir get's scanned again
+    - currently scans dirs multiple times and also each file
     - after first cache build this is no problem
+- add control of recursive scan of dir, editable per dir per group
+- add interface `getAttribute` + implement in `CodeInfoData` 
     
 ### Example CodeInfo DI Service Setup
 

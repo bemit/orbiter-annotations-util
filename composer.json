@@ -1,9 +1,17 @@
 {
   "name": "orbiter/annotations-util",
   "license": "MIT",
-  "description": "",
+  "description": "Helper for Doctrine\\Annotations, with cached Reflections ⚡",
+  "authors": [
+    {
+      "name": "Michael Becker",
+      "email": "michael@bemit.codes",
+      "homepage": "https://mlbr.xyz",
+      "role": "Developer"
+    }
+  ],
   "require": {
-    "php": ">=7.1",
+    "php": ">=7.2",
     "doctrine/annotations": "^1.6",
     "doctrine/cache": "^1.7",
     "scaleupstack/reflection": "^1.2",
