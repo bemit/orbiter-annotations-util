@@ -49,10 +49,10 @@ interface CodeInfoDataInterface {
     public function parse($group, Node $node);
 
     /**
-     * Add the raw class data and a simplified version of class names
+     * Add the class data, a simplified version of class names each classes methods and properties
      *
      * @param string $group
-     * @param Node\Name $class
+     * @param Node\Stmt\Class_ $class
      */
-    public function addClassName($group, Node\Name $class);
+    public function parseClass($group, Node\Stmt\Class_ $class);
 }

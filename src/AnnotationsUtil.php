@@ -43,12 +43,18 @@ class AnnotationsUtil {
         $reader = new Annotations\IndexedReader(new Annotations\AnnotationReader());
 
         if(!$cache && null === $cache_obj) {
-            return $reader;
+            return new Annotations\CachedReader(
+                new Annotations\IndexedReader(new Annotations\AnnotationReader()),
+                $cache_obj ?: new Cache\ArrayCache()
+            );
         }
 
         return new Annotations\CachedReader(
             new Annotations\IndexedReader(new Annotations\AnnotationReader()),
-            $cache_obj ?: new Cache\FilesystemCache($cache)
+            $cache_obj ?: new Cache\ChainCache([
+                new Cache\ArrayCache(),
+                new Cache\PhpFileCache($cache),
+            ])
         );
     }
 

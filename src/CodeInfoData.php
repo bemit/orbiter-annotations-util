@@ -12,6 +12,8 @@ use PhpParser\Node;
 class CodeInfoData implements CodeInfoDataInterface {
     public $classes = [];
     public $classes_simplified = [];
+    public $classes_methods = [];
+    public $classes_properties = [];
 
     /**
      * Should be used to set any property with the cached version
@@ -33,7 +35,7 @@ class CodeInfoData implements CodeInfoDataInterface {
      * @return array
      */
     public function getClassNames($group) {
-        return $this->classes_simplified[$group] ?: [];
+        return isset($this->classes_simplified[$group]) ? $this->classes_simplified[$group] : [];
     }
 
     /**
@@ -58,29 +60,69 @@ class CodeInfoData implements CodeInfoDataInterface {
      */
     public function parse($group, Node $node) {
         if($node instanceof Node\Stmt\Class_ && $node->namespacedName) {
-            $this->addClassName($group, $node->namespacedName);
+            $this->parseClass($group, $node);
         }
     }
 
     /**
-     * Add the raw class data and a simplified version of class names
+     * Add the class data, a simplified version of class names each classes methods and properties
      *
-     * @param string $group
-     * @param Node\Name $class
+     * @param $group
+     * @param \PhpParser\Node\Stmt\Class_ $node
      */
-    public function addClassName($group, Node\Name $class) {
-        if(!is_array($this->classes[$group])) {
+    public function parseClass($group, Node\Stmt\Class_ $node) {
+        if(!isset($this->classes[$group]) || !is_array($this->classes[$group])) {
             $this->classes[$group] = [];
         }
-        $this->classes[$group][] = $class;
+        $this->classes[$group][] = $node->namespacedName;
 
-        $simple = $this->simplifyClasses($class);
+        $simple = $this->simplifyClasses($node->namespacedName);
 
         if($simple) {
-            if(!is_array($this->classes_simplified[$group])) {
+            if(!isset($this->classes_simplified[$group]) || !is_array($this->classes_simplified[$group])) {
                 $this->classes_simplified[$group] = [];
             }
             $this->classes_simplified[$group][] = $simple;
+
+            if(!isset($this->classes_methods[$group]) || !is_array($this->classes_methods[$group])) {
+                $this->classes_methods[$group] = [];
+            }
+
+            $methods = [
+                'public' => [],
+                'static' => [],
+            ];
+            foreach($node->getMethods() as $method) {
+                if(!$method->isPublic()) {
+                    continue;
+                }
+                if($method->isStatic()) {
+                    $methods['static'][] = $method->name->name;
+                    continue;
+                }
+
+                $methods['public'][] = $method->name->name;
+            }
+            $this->classes_methods[$group][$simple] = $methods;
+
+            $properties = [
+                'public' => [],
+                'static' => [],
+            ];
+
+            foreach($node->getProperties() as $property) {
+                if(!$property->isPublic()) {
+                    continue;
+                }
+                
+                if($property->isStatic()) {
+                    $properties['static'][] = $property->name->name;
+                    continue;
+                }
+
+                $properties['public'][] = $property->name->name;
+            }
+            $this->classes_properties[$group][$simple] = $properties;
         }
     }
 }

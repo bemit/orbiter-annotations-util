@@ -92,6 +92,28 @@ class CodeInfo {
     }
 
     /**
+     * Uses the parsed class data and returns the classes and their methods
+     *
+     * @param $group
+     *
+     * @return array like ['static'=>[], 'public'=>[],]
+     */
+    public function getClassMethods($group) {
+        return $this->data->classes_methods[$group];
+    }
+
+    /**
+     * Uses the parsed class data and returns the classes and their properties
+     *
+     * @param $group
+     *
+     * @return array like ['static'=>[], 'public'=>[],]
+     */
+    public function getClassProperties($group) {
+        return $this->data->classes_properties[$group];
+    }
+
+    /**
      * Analyze code and get the classes out of each files contents in a folder, recursive
      *
      * @param $group

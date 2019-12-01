@@ -146,6 +146,24 @@ $code_info->process();
 
 // retrieve array of all class names found for this group of dirs
 $services = $code_info->getClassNames('services');
+
+$services_methods = $code_info->getClassMethods('services');
+/*
+ * array with all classes and one array for `public` and one for `static` 
+ * $services_methods = [
+ *     ClassName::class => [
+ *         'public' => [
+ *             '__construct',
+ *             'handle',
+ *         ],
+ *         'static' => [
+ *         ]
+ *     ],
+ * ];
+ */
+
+$services_properties = $code_info->getClassProperties('services');
+// properties array structure is like method structure
 ```
 
 Things needs to be done:
