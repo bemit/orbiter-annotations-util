@@ -211,7 +211,9 @@ $container = $container_builder->build();
 
 ## Take a Look
 
-Build event and middleware based apps with [Satellite](https://github.com/bemit/satellite-app), add annotation with this package.
+Want to build console apps with dependency injection and annotations? Use this app skeleton: [elbakerino/console](https://github.com/elbakerino/console-di-annotations), powered by PHP-DI, uses Doctrine\Annotations with this package.
+
+Build event and middleware based apps with [Satellite](https://github.com/bemit/satellite-app), also DI enabled and  annotation with this package.
 
 ## License
 
