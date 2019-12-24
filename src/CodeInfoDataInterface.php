@@ -32,27 +32,10 @@ interface CodeInfoDataInterface {
     public function getClassNames($group);
 
     /**
-     * Uses the parsed class data and returns their names
-     *
-     * @param Node\Name $class
-     *
-     * @return string
-     */
-    public function simplifyClasses(Node\Name $class);
-
-    /**
      * Used in the NodeWalker, so easy to extend the code info parser at all
      *
      * @param string $group
      * @param Node $node
      */
     public function parse($group, Node $node);
-
-    /**
-     * Add the class data, a simplified version of class names each classes methods and properties
-     *
-     * @param string $group
-     * @param Node\Stmt\Class_ $class
-     */
-    public function parseClass($group, Node\Stmt\Class_ $class);
 }

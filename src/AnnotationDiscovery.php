@@ -14,9 +14,25 @@ class AnnotationDiscovery {
      */
     protected $code_info;
 
-    protected $discoverers = [];
-
+    /**
+     * @var \Orbiter\AnnotationsUtil\AnnotationResult
+     */
     protected $discovered = [];
+
+    /**
+     * @var \Orbiter\AnnotationsUtil\AnnotationResultClass[]
+     */
+    protected $discovered_classes = [];
+
+    /**
+     * @var \Orbiter\AnnotationsUtil\AnnotationResultMethod[]
+     */
+    protected $discovered_methods = [];
+
+    /**
+     * @var \Orbiter\AnnotationsUtil\AnnotationResultProperty[]
+     */
+    protected $discovered_properties = [];
 
     /**
      * AnnotationDiscovery constructor.
@@ -27,51 +43,103 @@ class AnnotationDiscovery {
         $this->code_info = $code_info;
     }
 
-    public function addDiscover($annotation) {
-        $this->discoverers[$annotation] = true;
-    }
-
     public function setDiscovered(array $discovered) {
         return $this->discovered = $discovered;
     }
 
-    public function getDiscovered() {
+    /**
+     * @return \Orbiter\AnnotationsUtil\AnnotationResultClass[]|\Orbiter\AnnotationsUtil\AnnotationResultMethod[]|\Orbiter\AnnotationsUtil\AnnotationResultProperty[]
+     */
+    public function getAll(): array {
         return $this->discovered;
+    }
+
+    /**
+     * @param $annotation_class
+     *
+     * @return \Orbiter\AnnotationsUtil\AnnotationResult[]
+     */
+    public function getDiscovered($annotation_class) {
+        if(!isset($this->discovered[$annotation_class])) {
+            return [];
+        }
+
+        return $this->discovered[$annotation_class];
+    }
+
+    /**
+     * @param $class
+     * @param $annotation_class
+     *
+     * @return \Orbiter\AnnotationsUtil\AnnotationResultMethod[]
+     */
+    public function getDiscoveredMethods($class, $annotation_class) {
+        if(is_object($class)) {
+            $class = get_class($class);
+        }
+
+        if(!isset($this->discovered_methods[$class][$annotation_class])) {
+            return [];
+        }
+
+        return $this->discovered_methods[$class][$annotation_class];
+    }
+
+    /**
+     * @param $class
+     * @param $annotation_class
+     *
+     * @return \Orbiter\AnnotationsUtil\AnnotationResultProperty[]
+     */
+    public function getDiscoveredProperties($class, $annotation_class) {
+        if(is_object($class)) {
+            $class = get_class($class);
+        }
+
+        if(!isset($this->discovered_properties[$class][$annotation_class])) {
+            return [];
+        }
+
+        return $this->discovered_properties[$class][$annotation_class];
     }
 
     public function discoverByAnnotation($info_group) {
         $annotated = $this->code_info->getClassNames($info_group);
 
         foreach($annotated as $annotated_class) {
-            $class_annotation = AnnotationsUtil::getClassAnnotations($annotated_class);
-            foreach($class_annotation as $annotation_class => $class_anno) {
-                if(isset($this->discoverers[$annotation_class])) {
-                    $this->discovered[$annotation_class][] = [
-                        'class' => $annotated_class,
-                        'annotation' => $class_anno,
-                    ];
+            $class_annotations = AnnotationsUtil::getClassAnnotations($annotated_class);
+            foreach($class_annotations as $annotation_class => $annotation) {
+                $res = new AnnotationResultClass();
+                $res->setClass($annotated_class);
+                $res->setAnnotation($annotation);
+                $this->discovered_classes[$annotated_class] = $this->discovered[$annotation_class][] = $res;
+            }
+
+            $methods = AnnotationsUtil::getMethods($annotated_class);
+            foreach($methods as $method) {
+                $method_annotations = AnnotationsUtil::getMethodAnnotations($annotated_class, $method->name);
+                foreach($method_annotations as $annotation_class => $annotation) {
+                    $res = new AnnotationResultMethod();
+                    $res->setClass($annotated_class);
+                    $res->setMethod($method->name);
+                    $res->setAnnotation($annotation);
+                    $res->setStatic($method->isStatic());
+                    $res->setPrivate($method->isPrivate());
+                    $this->discovered_methods[$annotated_class][$annotation_class][] = $this->discovered[$annotation_class][] = $res;
                 }
             }
-        }
 
-        $annotated_methods = $this->code_info->getClassMethods($info_group);
-        foreach($annotated_methods as $class_name => $annotated_class_methods) {
-            if(!is_array($annotated_class_methods)) {
-                continue;
-            }
-            $methods = [];
-            array_push($methods, ...$annotated_class_methods['public']);
-            array_push($methods, ...$annotated_class_methods['static']);
-            foreach($methods as $method) {
-                $method_annotation = AnnotationsUtil::getMethodAnnotations($class_name, $method);
-                foreach($method_annotation as $annotation_class => $method_anno) {
-                    if(isset($this->discoverers[$annotation_class])) {
-                        $this->discovered[$annotation_class][] = [
-                            'class' => $class_name,
-                            'method' => $method,
-                            'annotation' => $method_anno,
-                        ];
-                    }
+            $properties = AnnotationsUtil::getProperties($annotated_class);
+            foreach($properties as $property) {
+                $property_annotations = AnnotationsUtil::getPropertyAnnotations($annotated_class, $property->name);
+                foreach($property_annotations as $annotation_class => $annotation) {
+                    $res = new AnnotationResultProperty();
+                    $res->setClass($annotated_class);
+                    $res->setProperty($property->name);
+                    $res->setAnnotation($annotation);
+                    $res->setStatic($property->isStatic());
+                    $res->setPrivate($property->isPrivate());
+                    $this->discovered_properties[$annotated_class][$annotation_class][] = $this->discovered[$annotation_class][] = $res;
                 }
             }
         }

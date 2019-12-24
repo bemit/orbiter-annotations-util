@@ -73,26 +73,13 @@ class AnnotationsUtil {
     /**
      * @param string|object $class
      *
-     * @return array|\ReflectionMethod[]
+     * @return \ReflectionMethod[]
      */
     public static function getMethods($class) {
         if(is_string($class)) {
             return Reflection::allMethodsOfClass($class);
         }
         return Reflection::allMethodsOfObject($class);
-    }
-
-    /**
-     * @param string|object $class
-     * @param string $property
-     *
-     * @return \ReflectionProperty
-     */
-    public static function getProperty($class, $property) {
-        if(is_string($class)) {
-            return Reflection::propertyOfClass($class, $property);
-        }
-        return Reflection::propertyOfObject($class, $property);
     }
 
     /**
@@ -106,6 +93,31 @@ class AnnotationsUtil {
             return Reflection::methodOfClass($class, $method);
         }
         return Reflection::methodOfObject($class, $method);
+    }
+
+    /**
+     * @param string|object $class
+     *
+     * @return \ReflectionProperty[]
+     */
+    public static function getProperties($class) {
+        if(is_string($class)) {
+            return Reflection::allPropertiesOfClass($class);
+        }
+        return Reflection::allPropertiesOfObject($class);
+    }
+    
+    /**
+     * @param string|object $class
+     * @param string $property
+     *
+     * @return \ReflectionProperty
+     */
+    public static function getProperty($class, $property) {
+        if(is_string($class)) {
+            return Reflection::propertyOfClass($class, $property);
+        }
+        return Reflection::propertyOfObject($class, $property);
     }
 
     public static function getPropertyValue(object $object, string $property) {

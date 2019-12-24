@@ -99,7 +99,7 @@ class CodeInfo {
      * @return array like ['static'=>[], 'public'=>[],]
      */
     public function getClassMethods($group) {
-        return $this->data->classes_methods[$group];
+        return $this->data->getClassMethods($group);
     }
 
     /**
@@ -110,7 +110,7 @@ class CodeInfo {
      * @return array like ['static'=>[], 'public'=>[],]
      */
     public function getClassProperties($group) {
-        return $this->data->classes_properties[$group];
+        return $this->data->getClassProperties($group);
     }
 
     /**
@@ -140,13 +140,6 @@ class CodeInfo {
                 $this->analyzeCode($group, file_get_contents($php_file));
             }
         }
-    }
-
-    /**
-     * @return \Orbiter\AnnotationsUtil\CodeInfoDataInterface the parsed result object
-     */
-    public function getData() {
-        return $this->data;
     }
 
     /**
