@@ -20,33 +20,35 @@ class CodeInfo {
     /**
      * @var string|null when string absolute path to cache file
      */
-    protected $file_cache;
+    protected ?string $file_cache;
 
-    protected $dirs_to_parse = [];
+    protected array $dirs_to_parse = [];
 
     /**
      * @var \Orbiter\AnnotationsUtil\CodeInfoDataInterface
      */
-    protected $data;
+    protected CodeInfoDataInterface $data;
 
     /**
      * @var array keys contains the extensions that should be used
      */
-    protected $extensions = [
+    protected array $extensions = [
         'php' => '',
     ];
 
     /**
+     * @param string|null $file_cache for caching
      * @param \Orbiter\AnnotationsUtil\CodeInfoDataInterface|null $data_obj overwrite $data_obj with your own
      */
-    public function __construct(CodeInfoDataInterface $data_obj = null) {
+    public function __construct($file_cache = null, CodeInfoDataInterface $data_obj = null) {
         $this->data = $data_obj ?: new CodeInfoData();
+        $this->file_cache = $file_cache;
     }
 
     /**
      * @param string $file_cache
      */
-    public function enableFileCache($file_cache) {
+    public function enableFileCache(string $file_cache) {
         $this->file_cache = $file_cache;
     }
 
@@ -55,7 +57,7 @@ class CodeInfo {
      *
      * @param string $ext
      */
-    public function addExtension($ext) {
+    public function addExtension(string $ext) {
         $this->extensions[$ext] = '';
     }
 
@@ -64,7 +66,7 @@ class CodeInfo {
      *
      * @param string $ext
      */
-    public function rmExtension($ext) {
+    public function rmExtension(string $ext) {
         if(isset($this->extensions[$ext])) {
             unset($this->extensions[$ext]);
         }
@@ -76,7 +78,7 @@ class CodeInfo {
      * @param string $group
      * @param string[] $dirs
      */
-    public function defineDirs($group, $dirs) {
+    public function defineDirs(string $group, array $dirs) {
         $this->dirs_to_parse[$group] = $dirs;
     }
 
@@ -87,7 +89,7 @@ class CodeInfo {
      *
      * @return array
      */
-    public function getClassNames($group) {
+    public function getClassNames(string $group) {
         return $this->data->getClassNames($group);
     }
 
@@ -98,7 +100,7 @@ class CodeInfo {
      *
      * @return array like ['static'=>[], 'public'=>[],]
      */
-    public function getClassMethods($group) {
+    public function getClassMethods(string $group) {
         return $this->data->getClassMethods($group);
     }
 
@@ -109,7 +111,7 @@ class CodeInfo {
      *
      * @return array like ['static'=>[], 'public'=>[],]
      */
-    public function getClassProperties($group) {
+    public function getClassProperties(string $group) {
         return $this->data->getClassProperties($group);
     }
 
@@ -119,7 +121,7 @@ class CodeInfo {
      * @param $group
      * @param array $dirs
      */
-    protected function parseDirs($group, $dirs) {
+    protected function parseDirs(string $group, array $dirs) {
         $scanned_dir = [];
         foreach($dirs as $dir) {
             if(!is_dir($dir)) {

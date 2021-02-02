@@ -34,13 +34,11 @@ class AnnotationDiscovery {
      */
     protected $discovered_properties = [];
 
-    /**
-     * AnnotationDiscovery constructor.
-     *
-     * @param \Orbiter\AnnotationsUtil\CodeInfo $code_info
-     */
-    public function __construct(CodeInfo $code_info) {
+    protected AnnotationReader $reader;
+
+    public function __construct(CodeInfo $code_info, AnnotationReader $reader) {
         $this->code_info = $code_info;
+        $this->reader = $reader;
     }
 
     public function setDiscovered(array $discovered) {
@@ -107,7 +105,7 @@ class AnnotationDiscovery {
         $annotated = $this->code_info->getClassNames($info_group);
 
         foreach($annotated as $annotated_class) {
-            $class_annotations = AnnotationsUtil::getClassAnnotations($annotated_class);
+            $class_annotations = $this->reader->getClassAnnotations($annotated_class);
             foreach($class_annotations as $annotation_class => $annotation) {
                 $res = new AnnotationResultClass();
                 $res->setClass($annotated_class);
@@ -115,9 +113,9 @@ class AnnotationDiscovery {
                 $this->discovered_classes[$annotated_class] = $this->discovered[$annotation_class][] = $res;
             }
 
-            $methods = AnnotationsUtil::getMethods($annotated_class);
+            $methods = CachedReflection::getMethods($annotated_class);
             foreach($methods as $method) {
-                $method_annotations = AnnotationsUtil::getMethodAnnotations($annotated_class, $method->name);
+                $method_annotations = $this->reader->getMethodAnnotations($annotated_class, $method->name);
                 foreach($method_annotations as $annotation_class => $annotation) {
                     $res = new AnnotationResultMethod();
                     $res->setClass($annotated_class);
@@ -129,9 +127,9 @@ class AnnotationDiscovery {
                 }
             }
 
-            $properties = AnnotationsUtil::getProperties($annotated_class);
+            $properties = CachedReflection::getProperties($annotated_class);
             foreach($properties as $property) {
-                $property_annotations = AnnotationsUtil::getPropertyAnnotations($annotated_class, $property->name);
+                $property_annotations = $this->reader->getPropertyAnnotations($annotated_class, $property->name);
                 foreach($property_annotations as $annotation_class => $annotation) {
                     $res = new AnnotationResultProperty();
                     $res->setClass($annotated_class);

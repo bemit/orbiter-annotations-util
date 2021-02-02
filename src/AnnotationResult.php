@@ -48,7 +48,7 @@ class AnnotationResult {
     }
 
     public function setPrivate($private) {
-        $this->is_private = $static;
+        $this->is_private = $private;
     }
 
     public function getPrivate() {
@@ -58,7 +58,7 @@ class AnnotationResult {
     /**
      * @param \object $annotation
      */
-    public function setAnnotation($annotation) {
+    public function setAnnotation(object $annotation) {
         $this->annotation = $annotation;
     }
 

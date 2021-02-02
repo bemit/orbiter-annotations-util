@@ -19,7 +19,7 @@ class CodeInfoData implements CodeInfoDataInterface {
      * @param $attr
      * @param $val
      */
-    public function setAttribute($attr, $val) {
+    public function setAttribute(string $attr, $val): void {
         if(property_exists($this, $attr)) {
             $this->$attr = $val;
         }
@@ -32,8 +32,8 @@ class CodeInfoData implements CodeInfoDataInterface {
      *
      * @return array
      */
-    public function getClassNames($group) {
-        return isset($this->classes_simplified[$group]) ? $this->classes_simplified[$group] : [];
+    public function getClassNames(string $group): array {
+        return $this->classes_simplified[$group] ?? [];
     }
 
     /**
@@ -42,7 +42,7 @@ class CodeInfoData implements CodeInfoDataInterface {
      * @param string $group
      * @param Node $node
      */
-    public function parse($group, Node $node) {
+    public function parse(string $group, Node $node): void {
         if($node instanceof Node\Stmt\Class_ && $node->namespacedName) {
             $this->parseClass($group, $node);
         }

@@ -8,9 +8,7 @@ use PhpParser\Node;
  * Data Handling Object Interface
  *
  * Describes a class that contains the static code analyze result,
- * either from automatic mapped from cache or live
- *
- * @todo add getAttribute, must call special implementations, when existing
+ * automatic mapped either from cache or in-code
  *
  * @package Orbiter\AnnotationsUtil
  */
@@ -22,14 +20,14 @@ interface CodeInfoDataInterface {
      * @param string $attr
      * @param $val
      */
-    public function setAttribute($attr, $val);
+    public function setAttribute(string $attr, $val): void;
 
     /**
      * @param $group
      *
      * @return array
      */
-    public function getClassNames($group);
+    public function getClassNames(string $group): array;
 
     /**
      * Used in the NodeWalker, so easy to extend the code info parser at all
@@ -37,5 +35,5 @@ interface CodeInfoDataInterface {
      * @param string $group
      * @param Node $node
      */
-    public function parse($group, Node $node);
+    public function parse(string $group, Node $node): void;
 }
