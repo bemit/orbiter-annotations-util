@@ -39,23 +39,56 @@ CachedReflection::invokeStaticMethod(App\Foo::class, 'foo');
 // Use normal doctrine where needed
 Doctrine\Common\Annotations\AnnotationReader::addGlobalIgnoredName('dummy');
 
-$annotations = new Orbiter\AnnotationsUtil\AnnotationReader(
+// setup reader with cached reflections
+$annotation_reader_cached = new Orbiter\AnnotationsUtil\AnnotationReader(
     new Doctrine\Common\Annotations\IndexedReader(
         new Doctrine\Common\Annotations\AnnotationReader()
     )
 );
 
 // Get Annotations
-$annotations->getClassAnnotations(App\Foo::class): array;// of annotations
-$annotations->getClassAnnotation(App\Foo::class, Lib\MyAnnotation::class): Lib\MyAnnotation;
+$annotation_reader_cached->getClassAnnotations(App\Foo::class): array;// of annotations
+$annotation_reader_cached->getClassAnnotation(App\Foo::class, Lib\MyAnnotation::class): Lib\MyAnnotation;
 
-$annotations->getPropertyAnnotations(App\Foo::class, 'bar'): array;// of annotations
-$annotations->getPropertyAnnotation(App\Foo::class, 'bar', Lib\MyAnnotation::class): Lib\MyAnnotation;
-echo $annotations->getPropertyAnnotation(App\Foo::class, 'bar', Lib\MyAnnotation::class)->myProperty;
+$annotation_reader_cached->getPropertyAnnotations(App\Foo::class, 'bar'): array;// of annotations
+$annotation_reader_cached->getPropertyAnnotation(App\Foo::class, 'bar', Lib\MyAnnotation::class): Lib\MyAnnotation;
+echo $annotation_reader_cached->getPropertyAnnotation(App\Foo::class, 'bar', Lib\MyAnnotation::class)->myProperty;
 
-$annotations->getMethodAnnotations(App\Foo::class, 'foo'): array;// of annotations
-$annotations->getMethodAnnotation(App\Foo::class, 'foo', Lib\MyAnnotation::class): Lib\MyAnnotation;
-echo $annotations->getMethodAnnotation(App\Foo::class, 'foo', Lib\MyAnnotation::class)->myProperty;
+$annotation_reader_cached->getMethodAnnotations(App\Foo::class, 'foo'): array;// of annotations
+$annotation_reader_cached->getMethodAnnotation(App\Foo::class, 'foo', Lib\MyAnnotation::class): Lib\MyAnnotation;
+echo $annotation_reader_cached->getMethodAnnotation(App\Foo::class, 'foo', Lib\MyAnnotation::class)->myProperty;
+
+
+// Setup code inspection / class discovery:
+
+$code_info = new Orbiter\AnnotationsUtil\CodeInfo();
+if(getenv('env') === 'prod') {
+    // absolute file to cache, if cache exists, it will not be re-freshed.
+    // Delete the file for a new cache
+    $code_info->enableFileCache(__DIR__ . '/tmp/codeinfo.cache');
+}
+
+// Add a group of dirs, named so you can parse dirs multiple times for different reasons
+$code_info->defineDirs('routes', [
+    __DIR__ . '/app/RouteHandler',
+]);
+
+// Change Extensions that will be parsed, default includes `php`
+$code_info->addExtension('php5');
+$code_info->rmExtension('php');
+
+// parse defined folders
+$code_info->process();
+
+
+// Get the discovery for annotations:
+$discovery = new Orbiter\AnnotationsUtil\AnnotationDiscovery($code_info, $annotation_reader_cached);
+$discovery->getAll();
+// get everything which where discovered for this route:
+$results = $discovery->getDiscovered(Satellite\KernelRoute\Annotations\Route::class);
+foreach($results as $result) {
+    $result->getAnnotation();
+}
 ```
 
 ### Example Annotation
@@ -98,11 +131,11 @@ Get value of the Annotation:
 <?php
 
 // this prints "demo-value"
-echo $annotations->getMethodAnnotation(App\Foo::class, 'bar', Lib\MyAnnotation::class)->myProperty;
+echo $annotation_reader_cached->getMethodAnnotation(App\Foo::class, 'bar', Lib\MyAnnotation::class)->myProperty;
 /**
  * @var Lib\MyAnnotation $annotation this variable is the Annotation instance and contains also it's data
  */
-$annotation = $annotations->getMethodAnnotation(App\Foo::class, 'bar', Lib\MyAnnotation::class);
+$annotation = $annotation_reader_cached->getMethodAnnotation(App\Foo::class, 'bar', Lib\MyAnnotation::class);
 // this is the recommended way to use the properties
 echo $annotation->myProperty;
 ```
@@ -118,7 +151,7 @@ Can be used e.g. to get all classes in a folder to search for Annotations of tho
 ```php
 <?php
 use Orbiter\AnnotationsUtil\CodeInfo;
-use Orbiter\AnnotationsUtil\CodeInfoData;
+use Orbiter\AnnotationsUtil\CachedReflection;
 
 $code_info = new CodeInfo();
 if(getenv('env') === 'prod') {
@@ -128,8 +161,8 @@ if(getenv('env') === 'prod') {
 }
 
 // Add a group of dirs, named so you can parse dirs multiple times for different reasons
-$code_info->defineDirs('commands', [
-    __DIR__ . '/app/Commands',
+$code_info->defineDirs('routes', [
+    __DIR__ . '/app/RouteHandler',
 ]);
 
 // Change Extensions that will be parsed, default includes `php`
@@ -140,25 +173,49 @@ $code_info->rmExtension('php');
 $code_info->process();
 
 // retrieve array of all class names found for this group of dirs
-$commands = $code_info->getClassNames('commands');
+$commands = $code_info->getClassNames('routes');
 
-$commands_methods = $code_info->getClassMethods('commands');
-/*
- * array with all classes and one array for `public` and one for `static` 
- * $services_methods = [
- *     ClassName::class => [
- *         'public' => [
- *             '__construct',
- *             'handle',
- *         ],
- *         'static' => [
- *         ]
- *     ],
- * ];
- */
+foreach($commands as $annotated_class) {
+    $class_annotations = $annotation_reader_cached->getClassAnnotations($annotated_class);
+    //
+    // $annotation is simply each found annotation with data, like `Satellite\KernelRoute\Annotations\Get`
+    // for all `foreach` here.
+    // the used `AnnotationResult` can be used for interop passing of annotation data,
+    // useful for building generic dispatching logic which doesn't need to know the actual annotation
 
-$commands_properties = $code_info->getClassProperties('commands');
-// properties array structure is like method structure
+    foreach($class_annotations as $annotation_class => $annotation) {
+        $one_class_annotation = new Orbiter\AnnotationsUtil\AnnotationResultClass();
+        $one_class_annotation->setClass($annotated_class);
+        $one_class_annotation->setAnnotation($annotation);
+        $annotation = $one_class_annotation->getAnnotation();
+    }
+
+    $methods = CachedReflection::getMethods($annotated_class);
+    foreach($methods as $method) {
+        $method_annotations = $annotation_reader_cached->getMethodAnnotations($annotated_class, $method->name);
+        foreach($method_annotations as $annotation_class => $annotation) {
+            $one_method_annotation = new Orbiter\AnnotationsUtil\AnnotationResultMethod();
+            $one_method_annotation->setClass($annotated_class);
+            $one_method_annotation->setMethod($method->name);
+            $one_method_annotation->setAnnotation($annotation);
+            $one_method_annotation->setStatic($method->isStatic());
+            $one_method_annotation->setPrivate($method->isPrivate());
+        }
+    }
+
+    $properties = CachedReflection::getProperties($annotated_class);
+    foreach($properties as $property) {
+        $property_annotations = $annotation_reader_cached->getPropertyAnnotations($annotated_class, $property->name);
+        foreach($property_annotations as $annotation_class => $annotation) {
+            $one_property_annotation = new Orbiter\AnnotationsUtil\AnnotationResultProperty();
+            $one_property_annotation->setClass($annotated_class);
+            $one_property_annotation->setProperty($property->name);
+            $one_property_annotation->setAnnotation($annotation);
+            $one_property_annotation->setStatic($property->isStatic());
+            $one_property_annotation->setPrivate($property->isPrivate());
+        }
+    }
+}
 ```
 
 ## Open todos

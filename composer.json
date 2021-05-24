@@ -1,28 +1,28 @@
 {
-  "name": "orbiter/annotations-util",
-  "license": "MIT",
-  "version": "0.4.0",
-  "description": "Helper for Doctrine\\Annotations, with cached Reflections ⚡",
-  "authors": [
-    {
-      "name": "Michael Becker",
-      "email": "michael@bemit.codes",
-      "homepage": "https://mlbr.xyz",
-      "role": "Developer"
-    }
-  ],
-  "require": {
-    "php": ">=7.2",
-    "doctrine/annotations": "^1.6",
-    "doctrine/cache": "^1.7",
-    "scaleupstack/reflection": "^1.2",
-    "nikic/php-parser": "^4.3.0"
-  },
-  "autoload": {
-    "psr-4": {
-      "Orbiter\\AnnotationsUtil\\": "src"
-    }
-  },
-  "minimum-stability": "dev",
-  "prefer-stable": true
+    "name": "orbiter/annotations-util",
+    "license": "MIT",
+    "version": "0.5.0",
+    "description": "Helper for Doctrine\\Annotations, with cached Reflections ⚡",
+    "authors": [
+        {
+            "name": "Michael Becker",
+            "email": "michael@bemit.codes",
+            "homepage": "https://mlbr.xyz",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": ">=7.4||>=8.0",
+        "doctrine/annotations": "^1.6",
+        "doctrine/cache": "^1.7",
+        "scaleupstack/reflection": "^1.2",
+        "nikic/php-parser": "^4.3.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Orbiter\\AnnotationsUtil\\": "src"
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
 }

@@ -53,16 +53,12 @@ class AnnotationDiscovery {
     }
 
     /**
-     * @param $annotation_class
+     * @param string $annotation_class
      *
      * @return \Orbiter\AnnotationsUtil\AnnotationResult[]
      */
-    public function getDiscovered($annotation_class) {
-        if(!isset($this->discovered[$annotation_class])) {
-            return [];
-        }
-
-        return $this->discovered[$annotation_class];
+    public function getDiscovered(string $annotation_class) {
+        return $this->discovered[$annotation_class] ?? [];
     }
 
     /**
@@ -76,11 +72,7 @@ class AnnotationDiscovery {
             $class = get_class($class);
         }
 
-        if(!isset($this->discovered_methods[$class][$annotation_class])) {
-            return [];
-        }
-
-        return $this->discovered_methods[$class][$annotation_class];
+        return $this->discovered_methods[$class][$annotation_class] ?? [];
     }
 
     /**
@@ -94,11 +86,7 @@ class AnnotationDiscovery {
             $class = get_class($class);
         }
 
-        if(!isset($this->discovered_properties[$class][$annotation_class])) {
-            return [];
-        }
-
-        return $this->discovered_properties[$class][$annotation_class];
+        return $this->discovered_properties[$class][$annotation_class] ?? [];
     }
 
     public function discoverByAnnotation($info_group) {

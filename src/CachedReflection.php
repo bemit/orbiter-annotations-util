@@ -15,7 +15,7 @@ class CachedReflection {
      *
      * @return \ReflectionClass
      */
-    public function getClass($class) {
+    public static function getClass($class) {
         if(is_string($class)) {
             return Reflection::classByName($class);
         }
@@ -40,7 +40,7 @@ class CachedReflection {
      *
      * @return \ReflectionMethod
      */
-    public static function getMethod($class, $method) {
+    public static function getMethod($class, string $method) {
         if(is_string($class)) {
             return Reflection::methodOfClass($class, $method);
         }
@@ -65,7 +65,7 @@ class CachedReflection {
      *
      * @return \ReflectionProperty
      */
-    public static function getProperty($class, $property) {
+    public static function getProperty($class, string $property) {
         if(is_string($class)) {
             return Reflection::propertyOfClass($class, $property);
         }

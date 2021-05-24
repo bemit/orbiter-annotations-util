@@ -41,7 +41,7 @@ class CodeInfo {
      * @param \Orbiter\AnnotationsUtil\CodeInfoDataInterface|null $data_obj overwrite $data_obj with your own
      */
     public function __construct($file_cache = null, CodeInfoDataInterface $data_obj = null) {
-        $this->data = $data_obj ?: new CodeInfoData();
+        $this->data = $data_obj ?? new CodeInfoData();
         $this->file_cache = $file_cache;
     }
 
@@ -94,28 +94,6 @@ class CodeInfo {
     }
 
     /**
-     * Uses the parsed class data and returns the classes and their methods
-     *
-     * @param $group
-     *
-     * @return array like ['static'=>[], 'public'=>[],]
-     */
-    public function getClassMethods(string $group) {
-        return $this->data->getClassMethods($group);
-    }
-
-    /**
-     * Uses the parsed class data and returns the classes and their properties
-     *
-     * @param $group
-     *
-     * @return array like ['static'=>[], 'public'=>[],]
-     */
-    public function getClassProperties(string $group) {
-        return $this->data->getClassProperties($group);
-    }
-
-    /**
      * Analyze code and get the classes out of each files contents in a folder, recursive
      *
      * @param $group
@@ -152,7 +130,7 @@ class CodeInfo {
      * @param string $group
      * @param string $code
      */
-    protected function analyzeCode($group, $code) {
+    protected function analyzeCode(string $group, string $code) {
         $parser = (new ParserFactory)->create(ParserFactory::PREFER_PHP7);
 
         $ast = $parser->parse($code);// this may throw
@@ -188,6 +166,7 @@ class CodeInfo {
      * Process the defined parsings or re-initiate data from cache
      *
      * @throws \Orbiter\AnnotationsUtil\CodeInfoCacheFileException
+     * @throws \JsonException
      */
     public function process() {
         if(
@@ -205,7 +184,7 @@ class CodeInfo {
             }
 
             if($this->file_cache) {
-                file_put_contents($this->file_cache, json_encode($this->data));
+                file_put_contents($this->file_cache, json_encode($this->data, JSON_THROW_ON_ERROR));
             }
             return;
         }
@@ -213,7 +192,7 @@ class CodeInfo {
         if(is_file($this->file_cache)) {
             // when file cache exists
             $cache_content = file_get_contents($this->file_cache);
-            $cache_content_parsed = json_decode($cache_content, true);
+            $cache_content_parsed = json_decode($cache_content, true, 512, JSON_THROW_ON_ERROR);
 
             $this->mapCache($cache_content_parsed);
 
@@ -228,7 +207,7 @@ class CodeInfo {
      *
      * @param array $cache array representation of this class
      */
-    protected function mapCache($cache) {
+    protected function mapCache(array $cache) {
         foreach($cache as $attr => $value) {
             $this->data->setAttribute($attr, $value);
         }
