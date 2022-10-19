@@ -8,12 +8,6 @@ namespace Orbiter\AnnotationsUtil;
  * @package Orbiter\AnnotationsUtil
  */
 class AnnotationDiscovery {
-
-    /**
-     * @var \Orbiter\AnnotationsUtil\CodeInfo
-     */
-    protected $code_info;
-
     /**
      * @var \Orbiter\AnnotationsUtil\AnnotationResult
      */
@@ -36,12 +30,11 @@ class AnnotationDiscovery {
 
     protected AnnotationReader $reader;
 
-    public function __construct(CodeInfo $code_info, AnnotationReader $reader) {
-        $this->code_info = $code_info;
+    public function __construct(AnnotationReader $reader) {
         $this->reader = $reader;
     }
 
-    public function setDiscovered(array $discovered) {
+    public function setDiscovered(array $discovered): array {
         return $this->discovered = $discovered;
     }
 
@@ -89,9 +82,7 @@ class AnnotationDiscovery {
         return $this->discovered_properties[$class][$annotation_class] ?? [];
     }
 
-    public function discoverByAnnotation($info_group) {
-        $annotated = $this->code_info->getClassNames($info_group);
-
+    public function discoverByAnnotation(array $annotated) {
         foreach($annotated as $annotated_class) {
             $class_annotations = $this->reader->getClassAnnotations($annotated_class);
             foreach($class_annotations as $annotation_class => $annotation) {

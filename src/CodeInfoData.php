@@ -3,81 +3,72 @@
 namespace Orbiter\AnnotationsUtil;
 
 use PhpParser\Node;
+use PhpParser\NodeVisitorAbstract;
 
 /**
  * Data Handling Object, result is cached and re-initiated in CodeInfo
  *
  * @package Orbiter\AnnotationsUtil
  */
-class CodeInfoData implements CodeInfoDataInterface {
-    public $classes = [];
-    public $classes_simplified = [];
+class CodeInfoData extends NodeVisitorAbstract implements CodeInfoDataInterface, \JsonSerializable {
+    protected $classes_simplified = [];
 
-    /**
-     * Should be used to set any property with the cached version
-     *
-     * @param $attr
-     * @param $val
-     */
-    public function setAttribute(string $attr, $val): void {
-        if(property_exists($this, $attr)) {
-            $this->$attr = $val;
+    public static function __set_state(array $cached) {
+        $next = new self();
+        if(isset($cached['classes_simplified'])) {
+            $next->classes_simplified = $cached['classes_simplified'];
         }
+        return $next;
+    }
+
+    public function jsonSerialize(): array {
+        return [
+            'classes_simplified' => $this->classes_simplified,
+        ];
     }
 
     /**
-     * Returns the found full qualified class names in this group of folders
-     *
-     * @param string $group
-     *
-     * @return array
+     * @inheritdoc
      */
-    public function getClassNames(string $group): array {
-        return $this->classes_simplified[$group] ?? [];
+    public function getClassNames(): array {
+        return $this->classes_simplified;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function enterNode(Node $node) {
+        $this->parse($node);
     }
 
     /**
      * Used in the NodeWalker, so easy to extend the code info parser at all
      *
-     * @param string $group
      * @param Node $node
      */
-    public function parse(string $group, Node $node): void {
+    public function parse(Node $node): void {
         if($node instanceof Node\Stmt\Class_ && $node->namespacedName) {
-            $this->parseClass($group, $node);
+            $this->parseClass($node);
         }
     }
 
     /**
      * Add the class data, a simplified version of class names each classes methods and properties
      *
-     * @param $group
      * @param \PhpParser\Node\Stmt\Class_ $node
      */
-    protected function parseClass($group, Node\Stmt\Class_ $node) {
-        if(!isset($this->classes[$group]) || !is_array($this->classes[$group])) {
-            $this->classes[$group] = [];
-        }
-        $this->classes[$group][] = $node->namespacedName;
+    protected function parseClass(Node\Stmt\Class_ $node) {
+        $simple = $this->simplifyClassName($node->namespacedName);
 
-        $simple = $this->simplifyClasses($node->namespacedName);
-
-        if($simple) {
-            if(!isset($this->classes_simplified[$group]) || !is_array($this->classes_simplified[$group])) {
-                $this->classes_simplified[$group] = [];
-            }
-            $this->classes_simplified[$group][] = $simple;
+        if($simple !== null) {
+            $this->classes_simplified[] = $simple;
         }
     }
 
     /**
      * Uses the parsed class data and returns their names
-     *
-     * @param Node\Name $class
-     *
-     * @return string
      */
-    protected function simplifyClasses(Node\Name $class) {
+    protected function simplifyClassName(Node\Name $class): ?string {
         if(!empty($class->parts)) {
             return implode('\\', $class->parts);
         }

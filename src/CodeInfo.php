@@ -2,214 +2,144 @@
 
 namespace Orbiter\AnnotationsUtil;
 
-use PhpParser\NodeVisitor\NameResolver;
-use PhpParser\ParserFactory;
-use PhpParser\Node;
-use PhpParser\NodeTraverser;
-use PhpParser\NodeVisitorAbstract;
-
 /**
  * Static Code Analyze Helper
- *
- * @todo add already-parsed file cache or even already parsed folder cache
- * @todo add control of recursive scan of dir, editable per dir per group
- *
- * @package Orbiter\AnnotationsUtil
  */
 class CodeInfo {
     /**
-     * @var string|null when string absolute path to cache file
+     * absolute path to cache file
      */
     protected ?string $file_cache;
 
-    protected array $dirs_to_parse = [];
+    /**
+     * @var CodeInfoSource[]
+     */
+    protected array $sources_to_parse = [];
+    /**
+     * @var CodeInfoData[]
+     */
+    protected array $info_data = [];
+    /**
+     * @var int[][] `key => [ &value ]` = `FLAG => [ &CodeInfoData, &CodeInfoData ]`
+     */
+    protected array $info_data_flag_refs = [];
+    /**
+     * @var string[]
+     */
+    protected array $flags = [];
+
+    protected CodeAnalyzer $analyzer;
 
     /**
-     * @var \Orbiter\AnnotationsUtil\CodeInfoDataInterface
+     * @param CodeAnalyzer $analyzer
+     * @param string|null $file_cache
      */
-    protected CodeInfoDataInterface $data;
-
-    /**
-     * @var array keys contains the extensions that should be used
-     */
-    protected array $extensions = [
-        'php' => '',
-    ];
-
-    /**
-     * @param string|null $file_cache for caching
-     * @param \Orbiter\AnnotationsUtil\CodeInfoDataInterface|null $data_obj overwrite $data_obj with your own
-     */
-    public function __construct($file_cache = null, CodeInfoDataInterface $data_obj = null) {
-        $this->data = $data_obj ?? new CodeInfoData();
-        $this->file_cache = $file_cache;
+    public function __construct(
+        CodeAnalyzer $analyzer,
+        ?string      $file_cache = null,
+    ) {
+        $this->analyzer = $analyzer;
+        $this->file_cache = $file_cache === null ? null :
+            (str_ends_with($file_cache, '.php') ? $file_cache : $file_cache . '.php');
     }
 
     /**
      * @param string $file_cache
      */
-    public function enableFileCache(string $file_cache) {
+    public function enableFileCache(string $file_cache): void {
         $this->file_cache = $file_cache;
     }
 
-    /**
-     * Add an extension that should be processed, default includes `php`
-     *
-     * @param string $ext
-     */
-    public function addExtension(string $ext) {
-        $this->extensions[$ext] = '';
-    }
-
-    /**
-     * Removes an extension from the processing, default includes `php`
-     *
-     * @param string $ext
-     */
-    public function rmExtension(string $ext) {
-        if(isset($this->extensions[$ext])) {
-            unset($this->extensions[$ext]);
-        }
-    }
-
-    /**
-     * Define a group of dirs to parse, select result is saved based on the groups, one dir can be in multiple groups.
-     *
-     * @param string $group
-     * @param string[] $dirs
-     */
-    public function defineDirs(string $group, array $dirs) {
-        $this->dirs_to_parse[$group] = $dirs;
+    public function defineSource(CodeInfoSource $source): void {
+        $this->sources_to_parse[] = $source;
     }
 
     /**
      * Uses the parsed class data and returns their names
      *
-     * @param $group
-     *
      * @return array
      */
-    public function getClassNames(string $group) {
-        return $this->data->getClassNames($group);
+    public function getClassNames(string $flag) {
+        $refs = $this->info_data_flag_refs[$flag];
+        if(!$refs) return [];
+        /**
+         * @var $r int
+         */
+        return array_reduce($refs, fn($all, $r) => array_unique(array_merge($all, $this->info_data[$r]->getClassNames())), []);
     }
 
     /**
-     * Analyze code and get the classes out of each files contents in a folder, recursive
-     *
-     * @param $group
-     * @param array $dirs
+     * @return string[]
      */
-    protected function parseDirs(string $group, array $dirs) {
-        $scanned_dir = [];
-        foreach($dirs as $dir) {
-            if(!is_dir($dir)) {
-                continue;
-            }
-            $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($dir), \RecursiveIteratorIterator::SELF_FIRST);
-
-            foreach($iterator as $file) {
-                if($file->isFile() && array_key_exists($file->getExtension(), $this->extensions)) {
-                    $scanned_dir[] = $file->getPathname();
-                }
-            }
-        }
-
-        foreach($scanned_dir as $php_file) {
-            // todo: here could be a good place for a `already scanned` cache check
-            if(is_file($php_file)) {
-                $this->analyzeCode($group, file_get_contents($php_file));
-            }
-        }
+    public function getFlags(): array {
+        return $this->flags;
     }
 
-    /**
-     * Analyze file content/code and get info out of it.
-     * - currently only class names
-     * - returns all full qualified class names
-     *
-     * @param string $group
-     * @param string $code
-     */
-    protected function analyzeCode(string $group, string $code) {
-        $parser = (new ParserFactory)->create(ParserFactory::PREFER_PHP7);
+    protected function shouldCache(): bool {
+        return $this->file_cache !== null;
+    }
 
-        $ast = $parser->parse($code);// this may throw
-
-        $nameResolver = new NameResolver;
-        $traverser = new NodeTraverser();
-        $traverser->addVisitor($nameResolver);
-
-        $traverser->addVisitor(new class($this->data, $group) extends NodeVisitorAbstract {
-            /**
-             * @var \Orbiter\AnnotationsUtil\CodeInfoDataInterface
-             */
-            protected $data;
-            /**
-             * @var string
-             */
-            protected $group;
-
-            public function __construct(&$data, $group) {
-                $this->data =& $data;
-                $this->group = $group;
-            }
-
-            public function enterNode(Node $node) {
-                $this->data->parse($this->group, $node);
-            }
-        });
-
-        $traverser->traverse($ast);
+    protected function hasCache(): bool {
+        $dir = dirname($this->file_cache);
+        if(!is_dir($dir) && !mkdir($dir, 0775, true)) {
+            throw new \RuntimeException('file_cache dir can not be created: ' . $dir);
+        }
+        return is_file($this->file_cache);
     }
 
     /**
      * Process the defined parsings or re-initiate data from cache
-     *
-     * @throws \Orbiter\AnnotationsUtil\CodeInfoCacheFileException
-     * @throws \JsonException
      */
-    public function process() {
-        if(
-            !$this->file_cache || (
-                $this->file_cache && !is_file($this->file_cache) && (
-                    is_dir(dirname($this->file_cache)) ||
-                    (!is_dir(dirname($this->file_cache)) && mkdir(dirname($this->file_cache), 0777, true) && is_dir(dirname($this->file_cache)))
-                )
-            )
-        ) {
-            // when no cache is on
-            // or cache is on: and cache file doesn't exist and (dir exists or could be created)
-            foreach($this->dirs_to_parse as $group => $to_load_dirs) {
-                $this->parseDirs($group, $to_load_dirs);
-            }
-
-            if($this->file_cache) {
-                file_put_contents($this->file_cache, json_encode($this->data, JSON_THROW_ON_ERROR));
-            }
-            return;
-        }
-
-        if(is_file($this->file_cache)) {
-            // when file cache exists
-            $cache_content = file_get_contents($this->file_cache);
-            $cache_content_parsed = json_decode($cache_content, true, 512, JSON_THROW_ON_ERROR);
-
-            $this->mapCache($cache_content_parsed);
+    public function process(): void {
+        if($this->shouldCache() && $this->hasCache()) {
+            $this->restoreCache();
 
             return;
         }
 
-        throw new CodeInfoCacheFileException('Can not process dirs, cache file not creatable: ' . $this->file_cache);
+        $folders = [];
+        foreach($this->sources_to_parse as $source_to_parse) {
+            $folder = $source_to_parse->getFolderToParse();
+            if(!isset($folders[$folder])) {
+                $folders[$folder] = [
+                    'extensions' => [],
+                    'flags' => [],
+                ];
+            }
+            $folders[$folder]['extensions'] = array_merge($folders[$folder]['extensions'], $source_to_parse->getExtensions());
+            $folders[$folder]['flags'] = array_merge($folders[$folder]['flags'], $source_to_parse->getFlags());
+        }
+
+        foreach($folders as $folder => $folder_sources) {
+            $folder_sources['extensions'] = array_unique($folder_sources['extensions']);
+            $folder_sources['flags'] = array_unique($folder_sources['flags']);
+            $code_data = $this->analyzer->parseFolder($folder, $folder_sources);
+            $this->info_data[] = $code_data;
+            $i = count($this->info_data) - 1;
+            foreach($folder_sources['flags'] as $flag) {
+                if(!isset($this->info_data_flag_refs[$flag])) {
+                    $this->info_data_flag_refs[$flag] = [];
+                }
+                $this->info_data_flag_refs[$flag][] = $i;
+            }
+            $this->flags = array_unique(array_merge($this->flags, $folder_sources['flags']));
+        }
+
+        if($this->shouldCache()) {
+            file_put_contents(
+                $this->file_cache,
+                "<?php\n\nreturn " .
+                var_export([
+                    'info_data' => $this->info_data,
+                    'info_data_flag_refs' => $this->info_data_flag_refs,
+                ], true) . ';',
+            );
+        }
     }
 
-    /**
-     * Get cached version into CodeInfoDataInterface implementing object
-     *
-     * @param array $cache array representation of this class
-     */
-    protected function mapCache(array $cache) {
-        foreach($cache as $attr => $value) {
-            $this->data->setAttribute($attr, $value);
-        }
+    protected function restoreCache(): void {
+        $cache_content = require($this->file_cache);
+        $this->info_data_flag_refs = $cache_content['info_data_flag_refs'];
+        $this->info_data = $cache_content['info_data'];
     }
 }

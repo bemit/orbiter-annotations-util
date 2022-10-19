@@ -2,38 +2,18 @@
 
 namespace Orbiter\AnnotationsUtil;
 
-use PhpParser\Node;
+use PhpParser\NodeVisitor;
 
 /**
  * Data Handling Object Interface
  *
- * Describes a class that contains the static code analyze result,
- * automatic mapped either from cache or in-code
+ * Describes a class that parsed ans stores the static code analyze result.
  *
  * @package Orbiter\AnnotationsUtil
  */
-interface CodeInfoDataInterface {
-
+interface CodeInfoDataInterface extends NodeVisitor {
     /**
-     * Should be used to set any property with the cached version
-     *
-     * @param string $attr
-     * @param $val
-     */
-    public function setAttribute(string $attr, $val): void;
-
-    /**
-     * @param $group
-     *
      * @return array
      */
-    public function getClassNames(string $group): array;
-
-    /**
-     * Used in the NodeWalker, so easy to extend the code info parser at all
-     *
-     * @param string $group
-     * @param Node $node
-     */
-    public function parse(string $group, Node $node): void;
+    public function getClassNames(): array;
 }

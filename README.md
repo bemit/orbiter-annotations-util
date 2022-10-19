@@ -12,7 +12,7 @@ Includes CodeInfo for static code analyzes, for easier, automatic parsing of Ann
 Install with composer:
 
     composer require orbiter/annotations-util
- 
+
 See [doctrine docs](https://www.doctrine-project.org/projects/annotations.html) for details on what Annotations are and complexer Examples.
 
 ## AnnotationsUtil
@@ -68,23 +68,25 @@ if(getenv('env') === 'prod') {
     $code_info->enableFileCache(__DIR__ . '/tmp/codeinfo.cache');
 }
 
-// Add a group of dirs, named so you can parse dirs multiple times for different reasons
-$code_info->defineDirs('routes', [
-    __DIR__ . '/app/RouteHandler',
-]);
-
-// Change Extensions that will be parsed, default includes `php`
-$code_info->addExtension('php5');
-$code_info->rmExtension('php');
+// Add a dirs to scan, use `flag` for grouping different folders in the result
+$code_info->defineSource(
+    new CodeInfoSource(
+        __DIR__ . '/app',
+        ['FLAG_APP'],
+        ['php'],
+    ),
+);
 
 // parse defined folders
 $code_info->process();
 
-
 // Get the discovery for annotations:
-$discovery = new Orbiter\AnnotationsUtil\AnnotationDiscovery($code_info, $annotation_reader_cached);
-$discovery->getAll();
-// get everything which where discovered for this route:
+$discovery = new Orbiter\AnnotationsUtil\AnnotationDiscovery($annotation_reader_cached);
+
+$discovery->discoverByAnnotation(
+    $code_info->getClassNames('FLAG_APP'),
+);
+
 $results = $discovery->getDiscovered(Satellite\KernelRoute\Annotations\Route::class);
 foreach($results as $result) {
     $result->getAnnotation();
@@ -142,89 +144,6 @@ echo $annotation->myProperty;
 
 This example is a summarized version, using this utility to read in the end, from [Doctrine\Annotations: Create Annotations](https://www.doctrine-project.org/projects/doctrine-annotations/en/1.6/index.html#introduction).
 
-## Code Info - a file Content parsing helper
-
-It helps to parse PHP content of files to search e.g. for full qualified names, caching the parsed result after processing.
-
-Can be used e.g. to get all classes in a folder to search for Annotations of those classes - without initiating/importing the classes.
-
-```php
-<?php
-use Orbiter\AnnotationsUtil\CodeInfo;
-use Orbiter\AnnotationsUtil\CachedReflection;
-
-$code_info = new CodeInfo();
-if(getenv('env') === 'prod') {
-    // absolute file to cache, if cache exists, it will not be re-freshed.
-    // Delete the file for a new cache
-    $code_info->enableFileCache(__DIR__ . '/tmp/codeinfo.cache');
-}
-
-// Add a group of dirs, named so you can parse dirs multiple times for different reasons
-$code_info->defineDirs('routes', [
-    __DIR__ . '/app/RouteHandler',
-]);
-
-// Change Extensions that will be parsed, default includes `php`
-$code_info->addExtension('php5');
-$code_info->rmExtension('php');
-
-// parse defined folders
-$code_info->process();
-
-// retrieve array of all class names found for this group of dirs
-$commands = $code_info->getClassNames('routes');
-
-foreach($commands as $annotated_class) {
-    $class_annotations = $annotation_reader_cached->getClassAnnotations($annotated_class);
-    //
-    // $annotation is simply each found annotation with data, like `Satellite\KernelRoute\Annotations\Get`
-    // for all `foreach` here.
-    // the used `AnnotationResult` can be used for interop passing of annotation data,
-    // useful for building generic dispatching logic which doesn't need to know the actual annotation
-
-    foreach($class_annotations as $annotation_class => $annotation) {
-        $one_class_annotation = new Orbiter\AnnotationsUtil\AnnotationResultClass();
-        $one_class_annotation->setClass($annotated_class);
-        $one_class_annotation->setAnnotation($annotation);
-        $annotation = $one_class_annotation->getAnnotation();
-    }
-
-    $methods = CachedReflection::getMethods($annotated_class);
-    foreach($methods as $method) {
-        $method_annotations = $annotation_reader_cached->getMethodAnnotations($annotated_class, $method->name);
-        foreach($method_annotations as $annotation_class => $annotation) {
-            $one_method_annotation = new Orbiter\AnnotationsUtil\AnnotationResultMethod();
-            $one_method_annotation->setClass($annotated_class);
-            $one_method_annotation->setMethod($method->name);
-            $one_method_annotation->setAnnotation($annotation);
-            $one_method_annotation->setStatic($method->isStatic());
-            $one_method_annotation->setPrivate($method->isPrivate());
-        }
-    }
-
-    $properties = CachedReflection::getProperties($annotated_class);
-    foreach($properties as $property) {
-        $property_annotations = $annotation_reader_cached->getPropertyAnnotations($annotated_class, $property->name);
-        foreach($property_annotations as $annotation_class => $annotation) {
-            $one_property_annotation = new Orbiter\AnnotationsUtil\AnnotationResultProperty();
-            $one_property_annotation->setClass($annotated_class);
-            $one_property_annotation->setProperty($property->name);
-            $one_property_annotation->setAnnotation($annotation);
-            $one_property_annotation->setStatic($property->isStatic());
-            $one_property_annotation->setPrivate($property->isPrivate());
-        }
-    }
-}
-```
-
-## Open todos
-
-- cache parsed result of file or dir and use it when same file/dir get's scanned again
-    - currently scans dirs multiple times and also each file
-- add control of recursive scan of dir, editable per dir per group
-- add interface `getAttribute` + implement in `CodeInfoData` 
-
 ## Take a Look
 
 Want to build console apps with dependency injection and annotations? Use this app skeleton: [elbakerino/console](https://github.com/elbakerino/console-di-annotations), powered by PHP-DI, uses Doctrine\Annotations with this package.
@@ -243,4 +162,4 @@ By committing your code to the code repository you agree to release the code und
 
 ***
 
-Author: [Michael Becker](https://mlbr.xyz)
+Author: [Michael Becker](https://i-am-digital.eu)
