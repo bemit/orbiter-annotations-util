@@ -1,7 +1,7 @@
 {
     "name": "orbiter/annotations-util",
     "license": "MIT",
-    "version": "0.6.1",
+    "version": "0.6.2",
     "description": "Helper for Doctrine\\Annotations, with cached Reflections ⚡",
     "authors": [
         {

@@ -57,15 +57,15 @@ class CodeInfo {
     /**
      * Uses the parsed class data and returns their names
      *
-     * @return array
+     * @param string[] ...$flag
+     * @return string[]
      */
-    public function getClassNames(string $flag) {
-        $refs = $this->info_data_flag_refs[$flag];
-        if(!$refs) return [];
+    public function getClassNames(string ...$flag) {
+        $refs = array_reduce($flag, fn($frefs, $f) => [...$frefs, ...$this->info_data_flag_refs[$f] ?? []], []);
         /**
          * @var $r int
          */
-        return array_reduce($refs, fn($all, $r) => array_unique(array_merge($all, $this->info_data[$r]->getClassNames())), []);
+        return array_values(array_unique(array_reduce($refs, fn($all, $r) => [...$all, ...$this->info_data[$r]->getClassNames()], [])));
     }
 
     /**
@@ -106,13 +106,13 @@ class CodeInfo {
                     'flags' => [],
                 ];
             }
-            $folders[$folder]['extensions'] = array_merge($folders[$folder]['extensions'], $source_to_parse->getExtensions());
-            $folders[$folder]['flags'] = array_merge($folders[$folder]['flags'], $source_to_parse->getFlags());
+            $folders[$folder]['extensions'] = [...$folders[$folder]['extensions'], ...$source_to_parse->getExtensions()];
+            $folders[$folder]['flags'] = [...$folders[$folder]['flags'], ...$source_to_parse->getFlags()];
         }
 
         foreach($folders as $folder => $folder_sources) {
-            $folder_sources['extensions'] = array_unique($folder_sources['extensions']);
-            $folder_sources['flags'] = array_unique($folder_sources['flags']);
+            $folder_sources['extensions'] = array_values(array_unique($folder_sources['extensions']));
+            $folder_sources['flags'] = array_values(array_unique($folder_sources['flags']));
             $code_data = $this->analyzer->parseFolder($folder, $folder_sources);
             $this->info_data[] = $code_data;
             $i = count($this->info_data) - 1;
@@ -122,8 +122,9 @@ class CodeInfo {
                 }
                 $this->info_data_flag_refs[$flag][] = $i;
             }
-            $this->flags = array_unique(array_merge($this->flags, $folder_sources['flags']));
+            $this->flags = [...$this->flags, ...$folder_sources['flags']];
         }
+        $this->flags = array_values(array_unique($this->flags));
 
         if($this->shouldCache()) {
             file_put_contents(
